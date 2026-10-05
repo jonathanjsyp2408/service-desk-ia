@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Login from './Login';
 import Tickets from './Tickets';
+import TicketDetalle from './TicketDetalle';
 import './App.css';
 
 function leerUsuario() {
@@ -13,10 +14,12 @@ function leerUsuario() {
 
 export default function App() {
   const [usuario, setUsuario] = useState(leerUsuario);
+  const [ticketId, setTicketId] = useState(null);
 
   function cerrarSesion() {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
+    setTicketId(null);
     setUsuario(null);
   }
 
@@ -31,7 +34,18 @@ export default function App() {
           <button className="secundario" onClick={cerrarSesion}>Cerrar sesión</button>
         </div>
       </div>
-      <Tickets usuario={usuario} onExpirar={cerrarSesion} />
+
+      {ticketId ? (
+        <TicketDetalle
+          key={ticketId}
+          id={ticketId}
+          usuario={usuario}
+          onVolver={() => setTicketId(null)}
+          onExpirar={cerrarSesion}
+        />
+      ) : (
+        <Tickets usuario={usuario} onExpirar={cerrarSesion} onAbrir={setTicketId} />
+      )}
     </div>
   );
 }

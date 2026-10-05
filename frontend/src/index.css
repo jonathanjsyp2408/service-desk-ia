@@ -33,3 +33,7 @@ button.secundario:hover { background: #d1d5db; }
 .estado-en_progreso { background: #fef3c7; color: #92400e; }
 .estado-resuelto { background: #dcfce7; color: #166534; }
 .estado-cerrado { background: #e5e7eb; color: #374151; }
+.fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.comentario { border-top: 1px solid #e5e7eb; padding: 10px 0; }
+.comentario p { margin: 4px 0 12px; white-space: pre-wrap; }
+.ver { margin-top: 8px; }

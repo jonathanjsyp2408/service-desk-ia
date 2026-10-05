@@ -7,7 +7,7 @@ function formatear(fecha) {
   return new Date(fecha).toLocaleString('es-CO');
 }
 
-export default function Tickets({ usuario, onExpirar }) {
+export default function Tickets({ usuario, onExpirar, onAbrir }) {
   const [tickets, setTickets] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -108,6 +108,7 @@ export default function Tickets({ usuario, onExpirar }) {
               Creado: {formatear(t.creado_en)}
               {t.analista && <> · Analista: {t.analista}</>}
             </div>
+            <button className="secundario ver" onClick={() => onAbrir(t.id)}>Ver detalle</button>
           </div>
         ))}
       </div>
