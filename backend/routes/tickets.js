@@ -21,8 +21,8 @@ const SELECT_TICKET = `
   LEFT JOIN usuarios a ON a.id = t.analista_id
   LEFT JOIN categorias c ON c.id = t.categoria_id`;
 
-// POST /api/tickets  -> crear ticket (cualquier usuario con sesión)
-router.post('/', async (req, res) => {
+// POST /api/tickets  -> crear ticket (solo rol usuario)
+router.post('/', requerirRol('usuario'), async (req, res) => {
   const client = await pool.connect();
   try {
     const { titulo, descripcion, categoria } = req.body;

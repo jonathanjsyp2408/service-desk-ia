@@ -60,37 +60,41 @@ export default function Tickets({ usuario, onExpirar, onAbrir }) {
 
   return (
     <>
-      <div className="tarjeta">
-        <h2>Nuevo ticket</h2>
-        <form onSubmit={crear}>
-          <label>Título</label>
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={200} required />
+      {/* Solo el rol usuario puede crear tickets */}
+      {!esPersonal && (
+        <div className="tarjeta">
+          <h2>Nuevo ticket</h2>
+          <form onSubmit={crear}>
+            <label>Título</label>
+            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={200} required />
 
-          <label>Descripción</label>
-          <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+            <label>Descripción</label>
+            <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
 
-          <label>Categoría (opcional)</label>
-          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-            <option value="">Sin categoría</option>
-            {CATEGORIAS.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+            <label>Categoría (opcional)</label>
+            <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+              <option value="">Sin categoría</option>
+              {CATEGORIAS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
 
-          {error && <div className="error">{error}</div>}
-          {mensaje && <div className="exito">{mensaje}</div>}
+            {error && <div className="error">{error}</div>}
+            {mensaje && <div className="exito">{mensaje}</div>}
 
-          <div style={{ marginTop: 16 }}>
-            <button type="submit" disabled={enviando}>
-              {enviando ? 'Enviando...' : 'Crear ticket'}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div style={{ marginTop: 16 }}>
+              <button type="submit" disabled={enviando}>
+                {enviando ? 'Enviando...' : 'Crear ticket'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="tarjeta">
         <h2>{esPersonal ? 'Todos los tickets' : 'Mis tickets'}</h2>
 
+        {esPersonal && error && <div className="error">{error}</div>}
         {cargando && <div className="vacio">Cargando...</div>}
         {!cargando && tickets.length === 0 && <div className="vacio">Todavía no hay tickets.</div>}
 
