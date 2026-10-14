@@ -11,7 +11,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const esPersonal = (rol) => rol === 'analista' || rol === 'administrador';
 
 const SELECT_TICKET = `
-  SELECT t.id, t.titulo, t.descripcion, t.estado, t.prioridad,
+  SELECT t.id, t.numero, t.titulo, t.descripcion, t.estado, t.prioridad,
+         t.categoria_ia, t.prioridad_ia,
          t.creado_en, t.cerrado_en, t.usuario_id, t.analista_id,
          c.nombre AS categoria,
          u.nombre AS solicitante,
