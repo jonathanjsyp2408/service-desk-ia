@@ -1,0 +1,75 @@
+/* ===== Menu lateral ===== */
+body {
+  margin: 0;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.menu {
+  width: 230px;
+  flex-shrink: 0;
+  background: #16233b;
+  color: #ffffff;
+  padding: 24px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu .marca {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 8px 24px;
+}
+
+.menu .menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #cbd5e1;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.menu .menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.menu .menu-item.activo {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.principal {
+  flex: 1;
+  min-width: 0;
+}
+
+/* En pantallas pequenas el menu pasa arriba */
+@media (max-width: 700px) {
+  .app {
+    flex-direction: column;
+  }
+  .menu {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+  .menu .marca {
+    width: 100%;
+    margin: 0 0 8px;
+  }
+  .menu .menu-item {
+    width: auto;
+  }
+}
