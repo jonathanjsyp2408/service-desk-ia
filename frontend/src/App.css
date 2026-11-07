@@ -71,5 +71,24 @@ body {
   }
   .menu .menu-item {
     width: auto;
+   }
   }
+  /* ===== Sugerencia de la IA ===== */
+.sugerencia-ia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #eef4ff;
+  border: 1px solid #c7d7fe;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.sugerencia-ia.sin-sugerencia {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #666666;
 }

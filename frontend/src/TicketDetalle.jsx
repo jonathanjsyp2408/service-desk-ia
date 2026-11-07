@@ -3,6 +3,7 @@ import { peticion } from './api';
 
 const ESTADOS = ['abierto', 'en_progreso', 'resuelto', 'cerrado'];
 const PRIORIDADES = ['baja', 'media', 'alta', 'critica'];
+const CATEGORIAS = ['incidente', 'requerimiento', 'permiso', 'asesoria'];
 
 function formatear(fecha) {
   return new Date(fecha).toLocaleString('es-CO');
@@ -10,6 +11,10 @@ function formatear(fecha) {
 
 function nombreEstado(estado) {
   return estado.replace('_', ' ');
+}
+
+function numeroTicket(n) {
+  return 'SD-' + String(n).padStart(4, '0');
 }
 
 function textoHistorial(h) {
@@ -27,6 +32,7 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
 
   const [estado, setEstado] = useState('');
   const [prioridad, setPrioridad] = useState('');
+  const [categoria, setCategoria] = useState('');
   const [analistaId, setAnalistaId] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -46,6 +52,7 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
       setTicket(t);
       setEstado(t.estado);
       setPrioridad(t.prioridad || '');
+      setCategoria(t.categoria || '');
       setAnalistaId(t.analista_id || '');
       setComentarios(await peticion(`/tickets/${id}/comentarios`));
       if (esPersonal) setPersonal(await peticion('/usuarios/personal'));
@@ -61,6 +68,14 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
     cargar();
   }, [id]);
 
+  // Copia la sugerencia de la IA al formulario; el analista decide si guarda
+  function aplicarSugerencia() {
+    if (ticket.categoria_ia) setCategoria(ticket.categoria_ia);
+    if (ticket.prioridad_ia) setPrioridad(ticket.prioridad_ia);
+    setError('');
+    setMensaje('Sugerencia aplicada al formulario. Revisa y presiona "Guardar cambios".');
+  }
+
   async function guardar() {
     setError('');
     setMensaje('');
@@ -68,6 +83,7 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
     try {
       const cuerpo = { estado };
       if (prioridad) cuerpo.prioridad = prioridad;
+      if (categoria) cuerpo.categoria = categoria;
       if (analistaId) cuerpo.analista_id = analistaId;
       await peticion(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(cuerpo) });
       await cargar();
@@ -109,6 +125,8 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
     );
   }
 
+  const haySugerencia = ticket.categoria_ia || ticket.prioridad_ia;
+
   return (
     <>
       <div className="barra">
@@ -116,7 +134,7 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
       </div>
 
       <div className="tarjeta">
-        <h2>{ticket.titulo}</h2>
+        <h2>{numeroTicket(ticket.numero)} · {ticket.titulo}</h2>
         <div>
           <span className={`etiqueta estado-${ticket.estado}`}>{nombreEstado(ticket.estado)}</span>
           {ticket.prioridad && <span className="etiqueta">prioridad {ticket.prioridad}</span>}
@@ -136,12 +154,39 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
       {esPersonal && (
         <div className="tarjeta">
           <h3>Gestionar ticket</h3>
+
+          {haySugerencia ? (
+            <div className="sugerencia-ia">
+              <div>
+                <strong>Sugerencia de la IA:</strong>{' '}
+                {ticket.categoria_ia && <>categoría <span className="etiqueta">{ticket.categoria_ia}</span></>}{' '}
+                {ticket.prioridad_ia && <>prioridad <span className="etiqueta">{ticket.prioridad_ia}</span></>}
+              </div>
+              <button type="button" className="secundario" onClick={aplicarSugerencia}>
+                Aplicar sugerencia
+              </button>
+            </div>
+          ) : (
+            <div className="sugerencia-ia sin-sugerencia">
+              Este ticket no tiene sugerencia de la IA. Clasifícalo manualmente.
+            </div>
+          )}
+
           <div className="fila">
             <div>
               <label>Estado</label>
               <select value={estado} onChange={(e) => setEstado(e.target.value)}>
                 {ESTADOS.map((s) => (
                   <option key={s} value={s}>{nombreEstado(s)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Categoría</label>
+              <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+                <option value="">Sin categoría</option>
+                {CATEGORIAS.map((c) => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
