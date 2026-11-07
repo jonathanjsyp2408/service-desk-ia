@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, requerirRol } = require('../middleware/auth');
+const { clasificarTicket } = require('../ia');
 
 const router = express.Router();
 router.use(verificarToken); // todas las rutas de tickets exigen sesión
@@ -50,6 +51,20 @@ router.post('/', requerirRol('usuario'), async (req, res) => {
       [rows[0].id]
     );
     await client.query('COMMIT');
+
+    // Sugerencia de la IA. El ticket ya quedo creado: si la IA falla,
+    // simplemente queda sin sugerencia y la respuesta sigue siendo 201.
+    const sugerencia = await clasificarTicket(titulo.trim(), descripcion.trim());
+    if (sugerencia) {
+      try {
+        await pool.query(
+          'UPDATE tickets SET categoria_ia = $1, prioridad_ia = $2 WHERE id = $3',
+          [sugerencia.categoria, sugerencia.prioridad, rows[0].id]
+        );
+      } catch (err) {
+        console.error('IA: no se pudo guardar la sugerencia:', err.message);
+      }
+    }
 
     const t = await pool.query(SELECT_TICKET + ' WHERE t.id = $1', [rows[0].id]);
     res.status(201).json(t.rows[0]);
