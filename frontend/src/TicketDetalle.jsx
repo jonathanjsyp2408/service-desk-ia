@@ -1,21 +1,10 @@
 import { useEffect, useState } from 'react';
 import { peticion } from './api';
+import { formatear, codigoTicket, nombreEstado, TEXTO_SLA, NIVELES, NOMBRE_CAMPO } from './formato';
 
 const ESTADOS = ['abierto', 'en_progreso', 'resuelto', 'cerrado'];
 const PRIORIDADES = ['baja', 'media', 'alta', 'critica'];
 const CATEGORIAS = ['incidente', 'requerimiento', 'permiso', 'asesoria'];
-
-function formatear(fecha) {
-  return new Date(fecha).toLocaleString('es-CO');
-}
-
-function nombreEstado(estado) {
-  return estado.replace('_', ' ');
-}
-
-function numeroTicket(n) {
-  return 'SD-' + String(n).padStart(4, '0');
-}
 
 function textoHistorial(h) {
   if (!h.estado_anterior) return `Ticket creado como ${nombreEstado(h.estado_nuevo)}`;
@@ -34,6 +23,8 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
   const [prioridad, setPrioridad] = useState('');
   const [categoria, setCategoria] = useState('');
   const [analistaId, setAnalistaId] = useState('');
+  const [nivel, setNivel] = useState('1');
+  const [proveedor, setProveedor] = useState('');
   const [guardando, setGuardando] = useState(false);
 
   const [texto, setTexto] = useState('');
@@ -54,6 +45,8 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
       setPrioridad(t.prioridad || '');
       setCategoria(t.categoria || '');
       setAnalistaId(t.analista_id || '');
+      setNivel(String(t.nivel || 1));
+      setProveedor(t.proveedor || '');
       setComentarios(await peticion(`/tickets/${id}/comentarios`));
       if (esPersonal) setPersonal(await peticion('/usuarios/personal'));
       setError('');
@@ -68,12 +61,12 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
     cargar();
   }, [id]);
 
-  // Copia la sugerencia de la IA al formulario; el analista decide si guarda
+  // Copia la clasificacion de la IA al formulario; el analista decide si guarda
   function aplicarSugerencia() {
     if (ticket.categoria_ia) setCategoria(ticket.categoria_ia);
     if (ticket.prioridad_ia) setPrioridad(ticket.prioridad_ia);
     setError('');
-    setMensaje('Sugerencia aplicada al formulario. Revisa y presiona "Guardar cambios".');
+    setMensaje('Clasificación de la IA aplicada al formulario. Revisa y presiona "Guardar cambios".');
   }
 
   async function guardar() {
@@ -81,10 +74,11 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
     setMensaje('');
     setGuardando(true);
     try {
-      const cuerpo = { estado };
+      const cuerpo = { estado, nivel: Number(nivel) };
       if (prioridad) cuerpo.prioridad = prioridad;
       if (categoria) cuerpo.categoria = categoria;
       if (analistaId) cuerpo.analista_id = analistaId;
+      if (nivel === '3') cuerpo.proveedor = proveedor;
       await peticion(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(cuerpo) });
       await cargar();
       setMensaje('Cambios guardados.');
@@ -125,7 +119,9 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
     );
   }
 
-  const haySugerencia = ticket.categoria_ia || ticket.prioridad_ia;
+  const hayIA = ticket.categoria_ia || ticket.prioridad_ia;
+  const iaCoincide = ticket.categoria_ia === ticket.categoria && ticket.prioridad_ia === ticket.prioridad;
+  const cambios = ticket.cambios || [];
 
   return (
     <>
@@ -134,11 +130,17 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
       </div>
 
       <div className="tarjeta">
-        <h2>{numeroTicket(ticket.numero)} · {ticket.titulo}</h2>
+        <h2>{codigoTicket(ticket)} · {ticket.titulo}</h2>
         <div>
           <span className={`etiqueta estado-${ticket.estado}`}>{nombreEstado(ticket.estado)}</span>
           {ticket.prioridad && <span className="etiqueta">prioridad {ticket.prioridad}</span>}
-          {ticket.categoria && <span className="etiqueta">{ticket.categoria}</span>}
+          {ticket.categoria
+            ? <span className="etiqueta">{ticket.categoria}</span>
+            : esPersonal && <span className="etiqueta sin-clasificar">sin clasificar</span>}
+          {esPersonal && <span className="etiqueta nivel">Nivel {ticket.nivel}</span>}
+          {esPersonal && ticket.sla_estado && (
+            <span className={`etiqueta sla-${ticket.sla_estado}`}>SLA: {TEXTO_SLA[ticket.sla_estado]}</span>
+          )}
         </div>
         <p>{ticket.descripcion}</p>
         <div className="meta">
@@ -147,6 +149,15 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
           {ticket.analista && <> · Analista: {ticket.analista}</>}
           {ticket.cerrado_en && <> · Cerrado: {formatear(ticket.cerrado_en)}</>}
         </div>
+        {esPersonal && (
+          <div className="meta">
+            {ticket.fecha_limite
+              ? <>Fecha límite (SLA): {formatear(ticket.fecha_limite)}</>
+              : <>Sin fecha límite: falta asignar tipo y prioridad</>}
+            {ticket.resuelto_en && <> · Resuelto: {formatear(ticket.resuelto_en)}</>}
+            {ticket.nivel === 3 && ticket.proveedor && <> · Proveedor: {ticket.proveedor}</>}
+          </div>
+        )}
         {error && <div className="error">{error}</div>}
         {mensaje && <div className="exito">{mensaje}</div>}
       </div>
@@ -155,20 +166,27 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
         <div className="tarjeta">
           <h3>Gestionar ticket</h3>
 
-          {haySugerencia ? (
+          {hayIA ? (
             <div className="sugerencia-ia">
               <div>
-                <strong>Sugerencia de la IA:</strong>{' '}
-                {ticket.categoria_ia && <>categoría <span className="etiqueta">{ticket.categoria_ia}</span></>}{' '}
+                <strong>Clasificación de la IA:</strong>{' '}
+                {ticket.categoria_ia && <>tipo <span className="etiqueta">{ticket.categoria_ia}</span></>}{' '}
                 {ticket.prioridad_ia && <>prioridad <span className="etiqueta">{ticket.prioridad_ia}</span></>}
+                <div className="meta">
+                  {iaCoincide
+                    ? 'La clasificación actual coincide con la de la IA.'
+                    : 'La clasificación actual fue modificada por un analista.'}
+                </div>
               </div>
-              <button type="button" className="secundario" onClick={aplicarSugerencia}>
-                Aplicar sugerencia
-              </button>
+              {!iaCoincide && (
+                <button type="button" className="secundario" onClick={aplicarSugerencia}>
+                  Volver a la clasificación de la IA
+                </button>
+              )}
             </div>
           ) : (
             <div className="sugerencia-ia sin-sugerencia">
-              Este ticket no tiene sugerencia de la IA. Clasifícalo manualmente.
+              Este ticket no fue clasificado por la IA. Clasifícalo manualmente.
             </div>
           )}
 
@@ -182,9 +200,9 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
               </select>
             </div>
             <div>
-              <label>Categoría</label>
+              <label>Tipo</label>
               <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-                <option value="">Sin categoría</option>
+                <option value="">Sin clasificar</option>
                 {CATEGORIAS.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -209,6 +227,29 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
               </select>
             </div>
           </div>
+
+          <div className="fila">
+            <div>
+              <label>Nivel de soporte</label>
+              <select value={nivel} onChange={(e) => setNivel(e.target.value)}>
+                {NIVELES.map((n) => (
+                  <option key={n.valor} value={n.valor}>{n.texto}</option>
+                ))}
+              </select>
+            </div>
+            {nivel === '3' && (
+              <div>
+                <label>Proveedor externo</label>
+                <input
+                  value={proveedor}
+                  onChange={(e) => setProveedor(e.target.value)}
+                  maxLength={150}
+                  placeholder="Nombre del proveedor"
+                />
+              </div>
+            )}
+          </div>
+
           <div style={{ marginTop: 16 }}>
             <button onClick={guardar} disabled={guardando}>
               {guardando ? 'Guardando...' : 'Guardar cambios'}
@@ -224,6 +265,19 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
             {formatear(h.cambiado_en)} · {textoHistorial(h)}
           </div>
         ))}
+
+        {esPersonal && (
+          <>
+            <h3 style={{ marginTop: 20 }}>Historial de cambios</h3>
+            {cambios.length === 0 && <div className="vacio">Sin cambios de clasificación, nivel o asignación.</div>}
+            {cambios.map((c, i) => (
+              <div className="meta cambio" key={i}>
+                {formatear(c.cambiado_en)} · {c.usuario}: {NOMBRE_CAMPO[c.campo] || c.campo}{' '}
+                {c.valor_anterior || '—'} → {c.valor_nuevo || '—'}
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       <div className="tarjeta">

@@ -92,3 +92,45 @@ body {
   border-color: #e0e0e0;
   color: #666666;
 }
+
+/* ===== Semaforo del SLA, nivel y estado de clasificacion ===== */
+.etiqueta.sla-en_tiempo {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.etiqueta.sla-por_vencer {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.etiqueta.sla-vencido {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.etiqueta.sla-cumplido {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.etiqueta.sla-incumplido {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.etiqueta.nivel {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.etiqueta.sin-clasificar {
+  background: #f3f4f6;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.cambio {
+  padding: 4px 0;
+  border-bottom: 1px solid #eeeeee;
+}

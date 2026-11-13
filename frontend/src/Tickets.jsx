@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react';
 import { peticion } from './api';
-
-function formatear(fecha) {
-  return new Date(fecha).toLocaleString('es-CO');
-}
-
-function numeroTicket(n) {
-  return 'SD-' + String(n).padStart(4, '0');
-}
+import { formatear, codigoTicket, nombreEstado, TEXTO_SLA } from './formato';
 
 export default function Tickets({ usuario, onExpirar, onAbrir, aviso }) {
   const [tickets, setTickets] = useState([]);
@@ -43,17 +36,24 @@ export default function Tickets({ usuario, onExpirar, onAbrir, aviso }) {
 
       {tickets.map((t) => (
         <div className="ticket" key={t.id}>
-          <h3>{numeroTicket(t.numero)} · {t.titulo}</h3>
+          <h3>{codigoTicket(t)} · {t.titulo}</h3>
           <div>
-            <span className={`etiqueta estado-${t.estado}`}>{t.estado.replace('_', ' ')}</span>
+            <span className={`etiqueta estado-${t.estado}`}>{nombreEstado(t.estado)}</span>
             {t.prioridad && <span className="etiqueta">prioridad {t.prioridad}</span>}
-            {t.categoria && <span className="etiqueta">{t.categoria}</span>}
+            {t.categoria
+              ? <span className="etiqueta">{t.categoria}</span>
+              : esPersonal && <span className="etiqueta sin-clasificar">sin clasificar</span>}
+            {esPersonal && <span className="etiqueta nivel">Nivel {t.nivel}</span>}
+            {esPersonal && t.sla_estado && (
+              <span className={`etiqueta sla-${t.sla_estado}`}>SLA: {TEXTO_SLA[t.sla_estado]}</span>
+            )}
           </div>
           <p>{t.descripcion}</p>
           <div className="meta">
             {esPersonal && <>Solicitante: {t.solicitante} · </>}
             Creado: {formatear(t.creado_en)}
             {t.analista && <> · Analista: {t.analista}</>}
+            {esPersonal && t.fecha_limite && !t.resuelto_en && <> · Vence: {formatear(t.fecha_limite)}</>}
           </div>
           <button className="secundario ver" onClick={() => onAbrir(t.id)}>Ver detalle</button>
         </div>

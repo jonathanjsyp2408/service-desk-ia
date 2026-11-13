@@ -65,7 +65,7 @@ export default function App() {
       <CrearTicket
         onExpirar={cerrarSesion}
         onCreado={(t) => {
-          setAviso(`Ticket SD-${String(t.numero).padStart(4, '0')} creado correctamente.`);
+                    setAviso(`Ticket ${t.codigo || 'SD-' + String(t.numero).padStart(4, '0')} creado correctamente.`);
           setVista('tickets');
         }}
       />
