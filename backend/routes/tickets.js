@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { verificarToken, requerirRol } = require('../middleware/auth');
-const { clasificarTicket } = require('../ia');
+const { procesarTicket } = require('../ia');
 
 const router = express.Router();
 router.use(verificarToken); // todas las rutas de tickets exigen sesión
@@ -37,6 +37,8 @@ const SELECT_TICKET = `
          t.categoria_ia, t.prioridad_ia, t.nivel, t.proveedor,
          t.creado_en, t.cerrado_en, t.resuelto_en, t.fecha_limite,
          ${SLA_ESTADO} AS sla_estado,
+         t.respuesta_ia, t.tipo_respuesta_ia, t.respuesta_util, t.resuelto_por_ia,
+         kb.codigo AS articulo_ia_codigo, kb.titulo AS articulo_ia_titulo,
          t.usuario_id, t.analista_id,
          c.nombre AS categoria,
          u.nombre AS solicitante,
@@ -44,7 +46,8 @@ const SELECT_TICKET = `
   FROM tickets t
   JOIN usuarios u ON u.id = t.usuario_id
   LEFT JOIN usuarios a ON a.id = t.analista_id
-  LEFT JOIN categorias c ON c.id = t.categoria_id`;
+  LEFT JOIN categorias c ON c.id = t.categoria_id
+  LEFT JOIN base_conocimiento kb ON kb.id = t.articulo_ia_id`;
 
 // Siguiente codigo del tipo (INC-0007, REQ-0001...). El UPDATE bloquea la fila,
 // asi dos tickets creados al mismo tiempo nunca reciben el mismo numero.
@@ -75,7 +78,8 @@ async function idCategoria(db, nombre) {
   return c.rows[0] ? c.rows[0].id : null;
 }
 
-// POST /api/tickets  -> crear ticket (solo rol usuario). La IA lo clasifica al crearlo.
+// POST /api/tickets  -> crear ticket (solo rol usuario).
+// La IA lo clasifica y redacta la primera respuesta al crearlo.
 router.post('/', requerirRol('usuario'), async (req, res) => {
   const { titulo, descripcion, categoria } = req.body;
   if (!titulo || !descripcion) {
@@ -91,8 +95,8 @@ router.post('/', requerirRol('usuario'), async (req, res) => {
       if (!categoriaId) return res.status(400).json({ error: 'Categoría inválida' });
     }
 
-    // Clasificacion de la IA. Si falla devuelve null y el ticket se crea igual.
-    const ia = await clasificarTicket(titulo.trim(), descripcion.trim());
+    // IA: clasificacion + respuesta. Si falla devuelve null y el ticket se crea igual.
+    const ia = await procesarTicket(titulo.trim(), descripcion.trim());
     if (!categoriaId && ia) categoriaId = await idCategoria(pool, ia.categoria);
     const prioridad = ia ? ia.prioridad : null;
 
@@ -100,10 +104,12 @@ router.post('/', requerirRol('usuario'), async (req, res) => {
     await client.query('BEGIN');
 
     const { rows } = await client.query(
-      `INSERT INTO tickets (usuario_id, categoria_id, titulo, descripcion, prioridad, categoria_ia, prioridad_ia)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      `INSERT INTO tickets (usuario_id, categoria_id, titulo, descripcion, prioridad,
+                            categoria_ia, prioridad_ia, respuesta_ia, tipo_respuesta_ia, articulo_ia_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
       [req.usuario.id, categoriaId, titulo.trim(), descripcion.trim(), prioridad,
-       ia ? ia.categoria : null, ia ? ia.prioridad : null]
+       ia ? ia.categoria : null, ia ? ia.prioridad : null,
+       ia ? ia.respuesta : null, ia ? ia.tipo_respuesta : null, ia ? ia.articulo_id : null]
     );
     const ticketId = rows[0].id;
 
@@ -187,6 +193,65 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST /api/tickets/:id/respuesta-ia  -> el usuario indica si la respuesta de la IA le sirvio.
+// Solo aplica a respuestas de autoservicio, una sola vez y con el ticket abierto.
+router.post('/:id/respuesta-ia', requerirRol('usuario'), async (req, res) => {
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: 'Ticket no encontrado' });
+  if (typeof req.body.util !== 'boolean') {
+    return res.status(400).json({ error: 'Indica util: true o false' });
+  }
+  const util = req.body.util;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const act = await client.query(
+      `SELECT usuario_id, estado, tipo_respuesta_ia, respuesta_util
+       FROM tickets WHERE id = $1 FOR UPDATE`,
+      [req.params.id]
+    );
+    const t = act.rows[0];
+    if (!t || t.usuario_id !== req.usuario.id) throw new ErrorHttp(404, 'Ticket no encontrado');
+    if (t.tipo_respuesta_ia !== 'autoservicio') {
+      throw new ErrorHttp(400, 'Este ticket no tiene una respuesta de autoservicio');
+    }
+    if (t.respuesta_util !== null) throw new ErrorHttp(400, 'Ya respondiste sobre esta respuesta');
+    if (t.estado !== 'abierto') throw new ErrorHttp(400, 'El ticket ya no está abierto');
+
+    if (util) {
+      await client.query(
+        `UPDATE tickets SET respuesta_util = TRUE, resuelto_por_ia = TRUE,
+                estado = 'resuelto', resuelto_en = LOCALTIMESTAMP
+         WHERE id = $1`,
+        [req.params.id]
+      );
+      await client.query(
+        `INSERT INTO historial_estados (ticket_id, estado_anterior, estado_nuevo)
+         VALUES ($1, 'abierto', 'resuelto')`,
+        [req.params.id]
+      );
+    } else {
+      await client.query('UPDATE tickets SET respuesta_util = FALSE WHERE id = $1', [req.params.id]);
+    }
+    await client.query(
+      `INSERT INTO historial_cambios (ticket_id, usuario_id, campo, valor_anterior, valor_nuevo)
+       VALUES ($1, $2, 'respuesta_ia', NULL, $3)`,
+      [req.params.id, req.usuario.id, util ? 'Le sirvió: resuelto por la IA' : 'No le sirvió: pasa a un analista']
+    );
+    await client.query('COMMIT');
+
+    const r = await pool.query(SELECT_TICKET + ' WHERE t.id = $1', [req.params.id]);
+    res.json(r.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (err instanceof ErrorHttp) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 
