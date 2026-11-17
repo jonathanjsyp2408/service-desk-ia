@@ -119,6 +119,8 @@ async function procesarTicket(titulo, descripcion) {
       respuesta,
       articulo_id: articulo ? articulo.id : null,
       articulo_codigo: articulo ? articulo.codigo : null,
+      tokens_entrada: r.usage ? r.usage.prompt_tokens : 0,
+      tokens_salida: r.usage ? r.usage.completion_tokens : 0,
     };
   } catch (err) {
     console.error('IA: no se pudo procesar el ticket:', err.status || '', err.message);
