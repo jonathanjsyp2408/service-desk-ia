@@ -5,6 +5,7 @@ const authRoutes = require('./routes/auth');
 const ticketsRoutes = require('./routes/tickets');
 const comentariosRoutes = require('./routes/comentarios');
 const usuariosRoutes = require('./routes/usuarios');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketsRoutes);
 app.use('/api/tickets', comentariosRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

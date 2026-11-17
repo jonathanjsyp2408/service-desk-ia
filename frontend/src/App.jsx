@@ -3,17 +3,23 @@ import Login from './Login';
 import Tickets from './Tickets';
 import TicketDetalle from './TicketDetalle';
 import CrearTicket from './CrearTicket';
+import Dashboard from './Dashboard';
 import './App.css';
 
-// Opciones del menu lateral segun el rol.
-// Inicio (dashboard), Usuarios y Base de conocimiento se agregan cuando existan esas pantallas.
+// Opciones del menu lateral segun el rol
 const MENU = {
   usuario: [
     { id: 'tickets', texto: 'Mis tickets' },
     { id: 'crear', texto: 'Crear ticket' },
   ],
-  analista: [{ id: 'tickets', texto: 'Tickets' }],
-  administrador: [{ id: 'tickets', texto: 'Tickets' }],
+  analista: [
+    { id: 'inicio', texto: 'Inicio' },
+    { id: 'tickets', texto: 'Tickets' },
+  ],
+  administrador: [
+    { id: 'inicio', texto: 'Inicio' },
+    { id: 'tickets', texto: 'Tickets' },
+  ],
 };
 
 function leerUsuario() {
@@ -24,9 +30,14 @@ function leerUsuario() {
   }
 }
 
+// El personal entra al dashboard; el usuario, a sus tickets
+function vistaInicial(u) {
+  return u && u.rol !== 'usuario' ? 'inicio' : 'tickets';
+}
+
 export default function App() {
   const [usuario, setUsuario] = useState(leerUsuario);
-  const [vista, setVista] = useState('tickets');
+  const [vista, setVista] = useState(() => vistaInicial(leerUsuario()));
   const [ticketId, setTicketId] = useState(null);
   const [aviso, setAviso] = useState('');
 
@@ -39,15 +50,21 @@ export default function App() {
     setUsuario(null);
   }
 
+  function iniciarSesion(u) {
+    setUsuario(u);
+    setVista(vistaInicial(u));
+  }
+
   function ir(destino) {
     setVista(destino);
     setTicketId(null);
     setAviso('');
   }
 
-  if (!usuario) return <Login onLogin={setUsuario} />;
+  if (!usuario) return <Login onLogin={iniciarSesion} />;
 
   const opciones = MENU[usuario.rol] || [];
+  const esPersonal = usuario.rol === 'analista' || usuario.rol === 'administrador';
 
   let contenido;
   if (ticketId) {
@@ -60,6 +77,8 @@ export default function App() {
         onExpirar={cerrarSesion}
       />
     );
+  } else if (vista === 'inicio' && esPersonal) {
+    contenido = <Dashboard onExpirar={cerrarSesion} />;
   } else if (vista === 'crear' && usuario.rol === 'usuario') {
     contenido = (
       <CrearTicket
