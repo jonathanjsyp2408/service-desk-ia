@@ -133,4 +133,37 @@ body {
 .cambio {
   padding: 4px 0;
   border-bottom: 1px solid #eeeeee;
+}/* ===== Respuesta del Asistente IA ===== */
+.respuesta-ia {
+  border-left: 4px solid #7c3aed;
+}
+
+.texto-ia {
+  white-space: pre-line;
+}
+
+.botones-ia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.aviso-ia {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.etiqueta.ia {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.etiqueta.alerta {
+  background: #fee2e2;
+  color: #991b1b;
 }

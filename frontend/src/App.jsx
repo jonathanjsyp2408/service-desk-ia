@@ -65,8 +65,10 @@ export default function App() {
       <CrearTicket
         onExpirar={cerrarSesion}
         onCreado={(t) => {
-                    setAviso(`Ticket ${t.codigo || 'SD-' + String(t.numero).padStart(4, '0')} creado correctamente.`);
+          // Al crear, se abre el detalle para que el usuario vea la respuesta de la IA
+          setAviso(`Ticket ${t.codigo || 'SD-' + String(t.numero).padStart(4, '0')} creado correctamente.`);
           setVista('tickets');
+          setTicketId(t.id);
         }}
       />
     );

@@ -30,7 +30,7 @@ export default function CrearTicket({ onExpirar, onCreado }) {
   return (
     <div className="tarjeta">
       <h2>Nuevo ticket</h2>
-      <p>Describe tu solicitud con el mayor detalle posible. Un analista la revisará.</p>
+      <p>Describe tu solicitud con el mayor detalle posible. El Asistente IA te responderá de inmediato.</p>
       <form onSubmit={crear}>
         <label>Título</label>
         <input value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={200} required />
@@ -50,7 +50,7 @@ export default function CrearTicket({ onExpirar, onCreado }) {
 
         <div style={{ marginTop: 16 }}>
           <button type="submit" disabled={enviando}>
-            {enviando ? 'Enviando...' : 'Crear ticket'}
+            {enviando ? 'Creando y analizando con IA...' : 'Crear ticket'}
           </button>
         </div>
       </form>

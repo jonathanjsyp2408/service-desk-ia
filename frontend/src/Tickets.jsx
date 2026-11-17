@@ -43,6 +43,8 @@ export default function Tickets({ usuario, onExpirar, onAbrir, aviso }) {
             {t.categoria
               ? <span className="etiqueta">{t.categoria}</span>
               : esPersonal && <span className="etiqueta sin-clasificar">sin clasificar</span>}
+            {t.resuelto_por_ia && <span className="etiqueta ia">Resuelto por IA</span>}
+            {esPersonal && t.respuesta_util === false && <span className="etiqueta alerta">IA no resolvió</span>}
             {esPersonal && <span className="etiqueta nivel">Nivel {t.nivel}</span>}
             {esPersonal && t.sla_estado && (
               <span className={`etiqueta sla-${t.sla_estado}`}>SLA: {TEXTO_SLA[t.sla_estado]}</span>

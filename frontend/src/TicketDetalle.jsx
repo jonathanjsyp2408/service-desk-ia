@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { peticion } from './api';
-import { formatear, codigoTicket, nombreEstado, TEXTO_SLA, NIVELES, NOMBRE_CAMPO } from './formato';
+import {
+  formatear, codigoTicket, nombreEstado, TEXTO_SLA, NIVELES, NOMBRE_CAMPO, TITULO_RESPUESTA,
+} from './formato';
 
 const ESTADOS = ['abierto', 'en_progreso', 'resuelto', 'cerrado'];
 const PRIORIDADES = ['baja', 'media', 'alta', 'critica'];
@@ -26,6 +28,7 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
   const [nivel, setNivel] = useState('1');
   const [proveedor, setProveedor] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [respondiendo, setRespondiendo] = useState(false);
 
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -60,6 +63,24 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
   useEffect(() => {
     cargar();
   }, [id]);
+
+  // El usuario indica si la respuesta de la IA le sirvio
+  async function responderIA(util) {
+    setError('');
+    setMensaje('');
+    setRespondiendo(true);
+    try {
+      await peticion(`/tickets/${id}/respuesta-ia`, { method: 'POST', body: JSON.stringify({ util }) });
+      await cargar();
+      setMensaje(util
+        ? '¡Qué bien! Tu ticket quedó resuelto.'
+        : 'Entendido. Un analista revisará tu caso.');
+    } catch (err) {
+      manejarError(err);
+    } finally {
+      setRespondiendo(false);
+    }
+  }
 
   // Copia la clasificacion de la IA al formulario; el analista decide si guarda
   function aplicarSugerencia() {
@@ -122,6 +143,8 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
   const hayIA = ticket.categoria_ia || ticket.prioridad_ia;
   const iaCoincide = ticket.categoria_ia === ticket.categoria && ticket.prioridad_ia === ticket.prioridad;
   const cambios = ticket.cambios || [];
+  const esperandoConfirmacion =
+    ticket.tipo_respuesta_ia === 'autoservicio' && ticket.respuesta_util === null && ticket.estado === 'abierto';
 
   return (
     <>
@@ -137,6 +160,7 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
           {ticket.categoria
             ? <span className="etiqueta">{ticket.categoria}</span>
             : esPersonal && <span className="etiqueta sin-clasificar">sin clasificar</span>}
+          {ticket.resuelto_por_ia && <span className="etiqueta ia">Resuelto por IA</span>}
           {esPersonal && <span className="etiqueta nivel">Nivel {ticket.nivel}</span>}
           {esPersonal && ticket.sla_estado && (
             <span className={`etiqueta sla-${ticket.sla_estado}`}>SLA: {TEXTO_SLA[ticket.sla_estado]}</span>
@@ -161,6 +185,37 @@ export default function TicketDetalle({ id, usuario, onVolver, onExpirar }) {
         {error && <div className="error">{error}</div>}
         {mensaje && <div className="exito">{mensaje}</div>}
       </div>
+
+      {ticket.respuesta_ia && (
+        <div className="tarjeta respuesta-ia">
+          <h3>Respuesta del Asistente IA</h3>
+          <div className="meta">
+            {TITULO_RESPUESTA[ticket.tipo_respuesta_ia] || 'Respuesta'}
+            {ticket.articulo_ia_codigo && <> · Basada en {ticket.articulo_ia_codigo}: {ticket.articulo_ia_titulo}</>}
+          </div>
+          <p className="texto-ia">{ticket.respuesta_ia}</p>
+
+          {!esPersonal && esperandoConfirmacion && (
+            <div className="botones-ia">
+              <span>¿Esta respuesta resolvió tu problema?</span>
+              <button onClick={() => responderIA(true)} disabled={respondiendo}>Sí, me sirvió</button>
+              <button className="secundario" onClick={() => responderIA(false)} disabled={respondiendo}>
+                No, necesito ayuda
+              </button>
+            </div>
+          )}
+
+          {esPersonal && esperandoConfirmacion && (
+            <div className="meta">Esperando que el usuario confirme si la respuesta le sirvió.</div>
+          )}
+          {ticket.respuesta_util === true && (
+            <div className="exito">Resuelto por la IA: el usuario confirmó que la respuesta le sirvió.</div>
+          )}
+          {ticket.respuesta_util === false && (
+            <div className="aviso-ia">El usuario indicó que la respuesta no le sirvió. El caso pasa a un analista.</div>
+          )}
+        </div>
+      )}
 
       {esPersonal && (
         <div className="tarjeta">

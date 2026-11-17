@@ -34,4 +34,11 @@ export const NOMBRE_CAMPO = {
   nivel: 'Nivel',
   proveedor: 'Proveedor',
   analista: 'Analista',
+  respuesta_ia: 'Respuesta de la IA',
+};
+
+export const TITULO_RESPUESTA = {
+  autoservicio: 'Pasos para resolverlo',
+  informativa: 'Información sobre la solicitud',
+  escalamiento: 'Caso escalado de inmediato',
 };
