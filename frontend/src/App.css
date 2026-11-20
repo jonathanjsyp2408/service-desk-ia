@@ -270,3 +270,42 @@ body {
   color: #111827;
   text-align: right;
 }
+/* ===== Logo JoluxIA ===== */
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.marca-logo {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.marca-nombre {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.marca-ia {
+  color: #8b5cf6;
+}
+/* ===== Logo en el inicio de sesion ===== */
+.login-marca {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+}
+
+.login-nombre {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-top: 6px;
+}

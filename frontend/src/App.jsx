@@ -105,7 +105,12 @@ export default function App() {
   return (
     <div className="app">
       <aside className="menu">
-        <div className="marca">Service Desk</div>
+        <div className="marca">
+          <img src="/logo.svg" alt="" className="marca-logo" />
+          <span className="marca-nombre">
+            Jolux<span className="marca-ia">IA</span>
+          </span>
+        </div>
         {opciones.map((op) => (
           <button
             key={op.id}
